@@ -173,7 +173,7 @@ docker compose up -d
 - Confirm ColdFusion service restarts after import
 - Monitor CF Administrator for successful settings application
 
-#### Basic Usage
+## Basic Usage
 
 ### Create Container
 ```shell
