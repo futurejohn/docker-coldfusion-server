@@ -1,0 +1,54 @@
+{
+    "MAPPING": {
+        "/CFIDE": {
+            "virtual": "/CFIDE",
+            "physical": "/opt/coldfusion/cfusion/wwwroot/CFIDE"
+        },
+        "/gateway": {
+            "virtual": "/gateway",
+            "physical": "/opt/coldfusion/cfusion/gateway/cfc"
+        },
+        "/testmapping": {
+            "virtual": "/testmapping",
+            "physical": "/tmp2"
+        }
+    },
+    "CACHING": {},
+    "CHART": {},
+    "CLIENTVARIABLE": {},
+    "CLOUDCONFIGURATION": {},
+    "CLOUDCREDENTIAL": {},
+    "COM": {},
+    "CUSTOMTAG": {},
+    "DATASOURCE": {},
+    "DEBUG": {},
+    "DOCUMENT": {},
+    "DOTNET": {},
+    "EVENTGATEWAYINSTANCE": {},
+    "EVENTGATEWAYSETTING": {},
+    "EVENTGATEWAYTYPE": {},
+    "GRAPHQLCLIENTCONFIG": {},
+    "GRAPHQLSERVICECONFIG": {},
+    "IDPCONFIGURATION": {},
+    "LDAPCONFIG": {},
+    "LOGGING": {},
+    "MAIL": {},
+    "METRIC": {},
+    "MONITORING": {},
+    "NOSQL": {},
+    "PDFSERVICE": {},
+    "PROBE": {},
+    "PROBECONFIG": {},
+    "REST": {},
+    "RUNTIME": {},
+    "SAMLCONFIG": {},
+    "SANDBOX": {},
+    "SCHEDULETASK": {},
+    "SECURITY": {},
+    "SOLR": {},
+    "SPCONFIGURATION": {},
+    "USER": {},
+    "WATCH": {},
+    "WEBSERVICE": {},
+    "WEBSOCKET": {}
+}

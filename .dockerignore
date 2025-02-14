@@ -1,0 +1,57 @@
+# .dockerignore
+
+# Ignore version control files
+.git
+.gitignore
+
+# Ignore editor and IDE files
+.vscode
+.idea
+*.swp
+*.swo
+
+# Ignore OS generated files
+.DS_Store
+Thumbs.db
+
+# Ignore log files
+*.log
+
+# Ignore temporary files
+*.tmp
+*.temp
+
+# Ignore build artifacts
+*.class
+
+# Ignore environment-specific files
+.env
+*.env
+# Do Not Ignore .env files in the config directory
+!config/*.env
+!config/tests/*
+!config/env/*.env
+# Do Not Ignore the config directory
+
+# Ignore documentation
+README.md
+docs/
+
+# Ignore test files
+# **/test/
+# **/tests/
+
+# Ignore development scripts
+scripts/
+
+# Ignore backup files
+*.bak
+
+# Ignore ColdFusion specific files that should not be in the image
+WEB-INF/cfclasses/
+
+# Ignore Docker Compose file
+compose.yaml
+
+# Ignore SQL scripts
+*.sql

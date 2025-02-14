@@ -1,0 +1,146 @@
+# compose.yaml
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "100m"
+    max-file: "5"
+    compress: "true"
+    tag: "{{.Name}}/{{.ID}}"
+    labels: "environment,service"
+
+services:
+  coldfusion-addons:
+    container_name: coldfusion-addons
+    restart: ${RESTART:-no}
+    image: adobecoldfusion/coldfusionaddons:latest
+    platform: linux/amd64
+    environment:
+      acceptEULA: "YES"
+      solrUsername: "admin"
+      solrPassword: "admin"
+      enableSecureProfile: "false"
+      TZ: "America/New_York"
+    ports:
+      - "8995:8995"
+    networks:
+      - webnet
+    volumes:
+      - ./config/scripts/start-jetty.sh:/opt/startup/start-jetty.sh
+      - ./logs/coldfusion-addons_logs:/opt/coldfusion/cfusion/logs
+    logging: *default-logging
+    labels:
+      environment: "development"
+      service: "coldfusion-addons"
+  coldfusion-server:
+    container_name: coldfusion-server
+    restart: ${RESTART:-no} # default to no
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CF_ADMIN_PASSWORD: ${CF_ADMIN_PASSWORD}
+    platform: linux/amd64
+    ports:
+      - "8500:8500"
+    environment:
+      # Required Environment Variables
+      acceptEULA: "YES"
+      TZ: "America/New_York"
+      # Optional Environment Variables
+      installModules: "all"
+      setupScript: "configureColdFusion.cfm"
+      setupScriptDelete: "false"
+      importCFSettings: "CFSettings.json"
+      deploymentType: "Development"
+      profile: "Development"
+      # Addons Configuration
+      configureExternalAddons: "true"
+      addonsHost: "coldfusion-addons"
+      addonsPort: "8995"  # Internal container port
+      addonsUsername: "admin"
+      addonsPassword: "admin"
+      addonsPDFServiceName: "coldfusion-addons"
+      addonsPDFSSL: "false"
+      MAIL_SERVER: mailpit
+      MAIL_PORT: 1025
+      # Setup Configuration Configuration Script
+      RUN_POST_INSTALL_TEST: "true"
+    depends_on:
+      - coldfusion-addons
+      - mailpit
+    networks:
+      - webnet
+    volumes:
+      - ${PROJECTS_PATH}:/app/projects
+      - ./data:/data
+      - ./logs/coldfusion-server_logs:/opt/coldfusion/cfusion/logs
+      - ./logs/coldfusion-performance_logs:/opt/coldfusion/cfusion/logs/performance
+      - ./logs/api-manager_logs:/opt/coldfusion/cfusion/logs/api-manager
+    logging:
+      <<: *default-logging
+      options:
+        tag: "{{.Name}}/{{.ID}}/{{.ImageName}}"
+        labels: "environment,service,version"
+    labels:
+      environment: "development"
+      service: "coldfusion-server"
+      version: "2023"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8500/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  mailpit:
+    image: axllent/mailpit
+    container_name: mailpit
+    restart: ${RESTART:-no}
+    platform: linux/arm64
+    volumes:
+      - ./data:/data
+    environment:
+      TZ: "America/New_York"
+      MP_MAX_MESSAGES: 5000
+      MP_DATABASE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    ports:
+      - "1025:1025" # SMTP server
+      - "8025:8025" # Web UI
+    networks:
+      - webnet
+    logging:
+      <<: *default-logging
+      options:
+        max-size: "50m"
+        max-file: "3"
+    labels:
+      environment: "development"
+      service: "mailpit"
+volumes:
+  # Application Data Volumes
+  coldfusion_server_data:
+    name: coldfusion-server-data
+    driver: local
+  # Log Volumes
+  coldfusion-server_logs:
+    name: coldfusion-server-logs
+    driver: local
+  coldfusion-addons_logs:
+    name: coldfusion-addons-logs
+    driver: local
+  coldfusion-performance_logs:
+    name: coldfusion-performance-logs
+    driver: local
+  coldfusion-api-manager_logs:
+    name: coldfusion-api-logs
+    driver: local
+
+  # Service Data Volumes
+
+networks:
+  webnet:
+    name: network
+    driver: bridge
+    labels:
+      environment: "development"

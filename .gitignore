@@ -1,0 +1,105 @@
+# .gitignore for ColdFusion Docker project
+
+# Environment variables
+.env
+*.env
+!config/*.env
+!config/env/*.env
+
+# VS Code Adobe ColdFusion extension
+.settings.xml
+.project
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+!logs
+!logs/api-manager_logs
+!logs/coldfusion-server_logs
+!logs/coldfusion-addons_logs
+!logs/coldfusion-performance_logs
+
+logs/api-manager_logs/*
+logs/coldfusion-server_logs/*
+logs/coldfusion-addons_logs/*
+logs/coldfusion-performance_logs/*
+coldfusion-out.log
+build-log.txt
+
+# Temporary files
+*.tmp
+*.temp
+
+# ColdFusion specific
+WEB-INF/cfclasses/
+
+# Build artifacts
+*.class
+
+# Docker
+.docker/
+
+# Specific to this project
+# app/config.log
+# app/**/*.class
+# app/WEB-INF/cfclasses/
+app/
+
+
+# This gnores everything in the `data` folder.
+data/*
+# This line explicitly allows .gitkeep to stay tracked, which allows us to keep the empty `data` folder
+!data/.gitkeep
+
+datastorelogs/
+docs/reference/
+docs/pending
+
+
+# Dependency directories (uncomment if you're using package managers)
+node_modules/
+
+# vendor/
+
+# Compiled source
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Packages
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Backup files
+*.bak
+*.gho
+*.ori
+*.orig
+*.tmp
+
+# Other
+*.cache
+*.swf
+
+# SQL dump files
+*.sql
+*.dump
