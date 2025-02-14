@@ -35,7 +35,6 @@ Thumbs.db
 
 # Ignore documentation
 README.md
-docs/
 
 # Ignore test files
 # **/test/
