@@ -114,14 +114,11 @@ RUN echo "Updated ColdFusion version:" && \
 
 # Copy and configure scripts with proper permissions
 COPY config/scripts/configure-coldfusion.sh /opt/startup/configure-coldfusion.sh
-# We can rename this...to copy the minimal startup script for runtime
-COPY config/scripts/minimal-start-coldfusion.sh /opt/startup/start-coldfusion.sh
+COPY config/scripts/start-coldfusion.sh /opt/startup/start-coldfusion.sh
 COPY config/scripts/configureColdFusion.cfm /app/
 COPY config/scripts/postInstallConfigurationTest.cfm /app/
 COPY config/imports/CFSettings.json /app/
 COPY config/imports/modules.txt /app/
-
-# COPY config/scripts/start-minimal.sh /opt/startup/start-coldfusion.sh
 
 # Set permissions in a single layer
 RUN chmod +x /opt/startup/start-coldfusion.sh \

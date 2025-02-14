@@ -64,26 +64,21 @@ filename="$2"
 
 start() {
     log_info "--- The start-coldfusion.sh is running ---"
+    log_info "------------------------------------------"
     log_info "Starting ColdFusion initialization process"
     log_info "------------------------------------------"
-    # log_info "Using ColdFusion port: ${CF_DOCKER_PORT}"
 
     if [ -e /opt/startup/disableScripts ]; then
         log_info "Skipping ColdFusion setup (scripts disabled)"
         startColdFusion 0
     else
         restartRequired=0
-        #skipconfigurationwizard
-        updateWebroot
-        updatePassword
-        updateLanguage
-        setupSerialNumber
         startColdFusion 0  
         # Execute setup functions and update restart flag
         execute_setup_functions
         cleanupTestDirectories
         log_info "Restart required: $restartRequired"
-        # Final action - Restart CF for changes to take effect        
+        # Final action - Restart CF for changes to take effect
         if [ $restartRequired = 1 ]; then
             startColdFusion 1
         fi
@@ -100,7 +95,12 @@ start() {
 }
 
 execute_setup_functions() {
-    setup_functions="installModules importCFsetup importModules importCAR setupExternalAddons setupExternalSessions invokeCustomCFM enableSecureProfile setDeploymentType setProfile"
+    setup_functions="
+    importCAR
+    setupExternalAddons 
+    setupExternalSessions 
+    update_jvm_config
+    invokeCustomCFM"
     for func in $setup_functions; do
         log_info "Executing setup function: $func"
         $func
@@ -156,16 +156,76 @@ startColdFusion() {
 }
 
 checkColdFusionStatus() {
-    response=$(/opt/coldfusion/cfusion/bin/coldfusion status)
-    version=$(/opt/coldfusion/cfusion/bin/cfinfo.sh -version)
+    # Wait 30 seconds initially to give CF time to start
+    sleep 30
+    
+    max_attempts=20
+    attempt=1
 
-    if [ "$response" = "Server is running" ]; then
+    while [ $attempt -le $max_attempts ]; do
+        # Check both status command and port availability
+        response=$(/opt/coldfusion/cfusion/bin/coldfusion status)
+        nc -z localhost 8500
+        port_status=$?
+
+        if [ "$response" = "Server is running" ] && [ $port_status -eq 0 ]; then
+            log_info "ColdFusion server is running and port 8500 is available"
+            return 0
+        else
+            log_info "Attempt $attempt of $max_attempts: Server status: $response, Port status: $port_status"
+            # Tail the last few lines of the log file for debugging
+            tail -n 5 /opt/coldfusion/cfusion/logs/coldfusion-out.log
+            sleep 15
+            attempt=$((attempt + 1))
+        fi
+    done
+
+    log_error "ColdFusion server failed to start after $max_attempts attempts"
+    exit 1
+}
+
+# In the start() function, modify to:
+start() {
+    log_info "--- The start-coldfusion.sh is running ---"
+    log_info "Starting ColdFusion initialization process"
+    
+    /opt/coldfusion/cfusion/bin/coldfusion start
+    
+    # Check status
+    checkColdFusionStatus
+    
+    # If we get here, server is running, so tail the logs
+    tail -f /opt/coldfusion/cfusion/logs/coldfusion-out.log
+}
+
+update_jvm_config() {
+    log_info "Updating JVM configuration"
+    jvm_config="/opt/coldfusion/cfusion/bin/jvm.config"
+
+    # Install fontconfig for PDF generation
+    log_info "Installing fontconfig package"
+    apt-get update && apt-get install -y fontconfig
+
+    # Backup original config
+    cp "$jvm_config" "${jvm_config}.bak"
+    log_info "Created backup of jvm.config"
+
+    # Update java.home path
+    log_info "Updating java.home path"
+    sed -i 's|java.home=../../jre/Contents/Home|java.home=/opt/coldfusion/jre|' "$jvm_config"
+
+    # Update java.args to include required exports
+    log_info "Updating java.args with required exports"
+    sed -i 's|java.args=\(.*\)|java.args=\1 --add-exports=java.desktop/sun.awt.image=ALL-UNNAMED --add-exports=java.desktop/sun.java2d=ALL-UNNAMED --add-exports=java.desktop/sun.font=ALL-UNNAMED|' "$jvm_config"
+
+    # Verify updates
+    if grep -q "java.home=/opt/coldfusion/jre" "$jvm_config" && \
+       grep -q "sun.font=ALL-UNNAMED" "$jvm_config"; then
+        log_info "JVM configuration updated successfully"
         return 0
     else
-        log_info "Checking server startup status: $response"
-        log_info "ColdFusion Installation: $version"
-        sleep 5
-        checkColdFusionStatus
+        log_error "Failed to update JVM configuration"
+        return 1
     fi
 }
 
@@ -542,6 +602,7 @@ setupSerialNumber() {
 }
 
 importCAR() {
+    log_info "Starting CAR import process"
     if [ "$(ls -A /data/*.car 2>/dev/null)" ]; then
         returnVal=1
     else
