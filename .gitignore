@@ -5,6 +5,7 @@
 *.env
 !config/*.env
 !config/env/*.env
+config/imports/CFSettings.local.json
 
 # VS Code Adobe ColdFusion extension
 .settings.xml
