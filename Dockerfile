@@ -117,7 +117,7 @@ COPY config/scripts/configure-coldfusion.sh /opt/startup/configure-coldfusion.sh
 COPY config/scripts/start-coldfusion.sh /opt/startup/start-coldfusion.sh
 COPY config/scripts/configureColdFusion.cfm /app/
 COPY config/scripts/postInstallConfigurationTest.cfm /app/
-COPY config/imports/CFSettings.json /app/
+COPY config/imports/CFSettings*.json /app/
 COPY config/imports/modules.txt /app/
 
 # Set permissions in a single layer
@@ -125,7 +125,7 @@ RUN chmod +x /opt/startup/start-coldfusion.sh \
     /opt/startup/configure-coldfusion.sh \
     /app/configureColdFusion.cfm \
     /app/postInstallConfigurationTest.cfm \
-    /app/CFSettings.json \
+    /app/CFSettings*.json \
     /app/modules.txt
 
 # Set environment variables for ColdFusion configuration

@@ -1,0 +1,8 @@
+{
+    "MAPPING": {
+        "/example": {
+            "virtual": "/example",
+            "physical": "/app/projects/example-project/example"
+        }
+    }
+}

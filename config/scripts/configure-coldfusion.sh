@@ -349,24 +349,35 @@ importCFsetup() {
     returnVal=0
     if [ -z "${importCFSettings+x}" ]; then
         log_info "No Settings to be imported"
-    else
-        cd /app || {
-            log_error "Failed to change directory to /app"
-            return 1
-        }
-        log_info "Importing CFsettings"
-        export JAVA_HOME=/opt/coldfusion/jre
-        /opt/coldfusion/config/cfsetup/cfsetup.sh alias cfusion /opt/coldfusion/cfusion
-        
-        if [ -z "${importCFSettingsPassphrase+x}" ]; then
-            /opt/coldfusion/config/cfsetup/cfsetup.sh import all "$importCFSettings" cfusion
-        else
-            /opt/coldfusion/config/cfsetup/cfsetup.sh import all "$importCFSettings" cfusion -p="$importCFSettingsPassphrase"
-        fi
-        
-        log_info "Imported CFsettings"
-        returnVal=1
+        return "$returnVal"
     fi
+
+    cd /app || {
+        log_error "Failed to change directory to /app"
+        return 1
+    }
+
+    export JAVA_HOME=/opt/coldfusion/jre
+    /opt/coldfusion/config/cfsetup/cfsetup.sh alias cfusion /opt/coldfusion/cfusion
+
+    # Import shared settings first, then machine-specific overrides when present
+    localSettings="${importCFSettings%.json}.local.json"
+    for settingsFile in "$importCFSettings" "$localSettings"; do
+        if [ ! -f "$settingsFile" ]; then
+            log_info "Settings file not found, skipping: $settingsFile"
+            continue
+        fi
+
+        log_info "Importing CFsettings from $settingsFile"
+        if [ -z "${importCFSettingsPassphrase+x}" ]; then
+            /opt/coldfusion/config/cfsetup/cfsetup.sh import all "$settingsFile" cfusion
+        else
+            /opt/coldfusion/config/cfsetup/cfsetup.sh import all "$settingsFile" cfusion -p="$importCFSettingsPassphrase"
+        fi
+        log_info "Imported CFsettings from $settingsFile"
+        returnVal=1
+    done
+
     return "$returnVal"
 }
 
@@ -377,7 +388,8 @@ execute_configuration_functions(){
         setupSerialNumber
         updateLanguage
         update_jvm_config
-        updateWebroot"
+        updateWebroot
+        importCFsetup"
     for func in $configuration_functions; do
         log_info "Executing configuration function: $func"
         $func
