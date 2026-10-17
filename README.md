@@ -18,7 +18,8 @@ A Docker-based development environment for Adobe ColdFusion 2023, featuring:
 
 1. Clone the repository
 2. Copy `.env.example` to `.env` and adjust settings as needed
-3. Build and start the containers:
+3. Optional: copy `config/imports/CFSettings.local.example.json` to `config/imports/CFSettings.local.json` and add project-specific settings (see [ColdFusion Settings](#coldfusion-settings))
+4. Build and start the containers:
 ```shell
 docker compose build --no-cache && docker compose up -d
 ```
@@ -42,7 +43,9 @@ Access services at:
 ├── compose.yaml                                # Docker compose configuration
 ├── config                                      # Configuration files
 │   ├── imports                                 # CF Admin import files
-│   │   ├── CFSettings.json
+│   │   ├── CFSettings.json                     # Shared settings (committed)
+│   │   ├── CFSettings.local.example.json       # Template for local settings (committed)
+│   │   ├── CFSettings.local.json               # Machine-specific settings (git-ignored, optional)
 │   │   └── modules.txt
 │   └── scripts                                 # Startup and config scripts
 │       ├── configure-coldfusion.sh
@@ -71,9 +74,75 @@ Copy `.env.example` to `.env` and adjust:
 
 ### ColdFusion Settings
 
-- Server configuration: `config/imports/CFSettings.json`
+- Server configuration: `config/imports/CFSettings.json` and `config/imports/CFSettings.local.json`
 - Module installation: `config/imports/modules.txt`
 - Custom scripts: `config/scripts/configureColdFusion.cfm`
+
+#### How Settings Are Imported
+
+ColdFusion Administrator settings are imported with `cfsetup` while the image is built, so they are part of the image and persist across container restarts. Two files are imported in order:
+
+| Order | File | Committed | Purpose |
+|-------|------|-----------|---------|
+| 1 | `CFSettings.json` | Yes | Generic settings shared by every installation (default mappings, empty categories) |
+| 2 | `CFSettings.local.json` | No (git-ignored) | Project- or machine-specific settings such as mappings and datasources |
+
+- The file name comes from the `importCFSettings` environment variable (default `CFSettings.json`). The local file name is derived from it by inserting `.local` before `.json`.
+- The local file is optional. If it does not exist, the build logs `Settings file not found, skipping` and continues.
+- Values in the local file are applied after the shared file, so an entry with the same key (for example, the same mapping name) replaces the shared value.
+- If `importCFSettingsPassphrase` is set, the same passphrase is used for both files.
+
+#### Adding Project-Specific Settings
+
+1. Copy the template:
+```shell
+cp config/imports/CFSettings.local.example.json config/imports/CFSettings.local.json
+```
+
+2. Add entries using the same category keys as `CFSettings.json`. Example mapping for a project mounted under `PROJECTS_PATH`:
+```json
+{
+    "MAPPING": {
+        "/admin": {
+            "virtual": "/admin",
+            "physical": "/app/projects/my-project/admin"
+        }
+    }
+}
+```
+   Physical paths are paths inside the container. The `PROJECTS_PATH` directory from `.env` is mounted at `/app/projects`.
+
+3. Rebuild the server image so the settings are imported:
+```shell
+docker compose build coldfusion-server && docker compose up -d coldfusion-server
+```
+
+4. Confirm the settings were applied:
+```shell
+docker exec coldfusion-server /opt/coldfusion/config/cfsetup/cfsetup.sh show MAPPING cfusion
+```
+
+#### Guidelines
+
+- Keep `CFSettings.json` free of project names, paths, credentials, and hostnames. Anything specific to one project or machine belongs in `CFSettings.local.json`.
+- Settings changed in the ColdFusion Administrator are lost when the image is rebuilt. Add them to one of the settings files to make them permanent.
+- Changes to either settings file take effect only after a rebuild; restarting the container is not enough.
+- To start from existing Administrator settings, export them from a running container and copy the needed categories into the local file:
+```shell
+docker exec coldfusion-server /opt/coldfusion/config/cfsetup/cfsetup.sh export all /tmp/export.json cfusion
+docker cp coldfusion-server:/tmp/export.json ./export.json
+```
+  Delete `export.json` after copying the values, since an export can contain credentials.
+- If an import fails on a file that contains only some categories, add the missing categories from `CFSettings.json` as empty objects (`{}`).
+
+#### Settings Files vs. CAR Files
+
+| | `CFSettings*.json` | `.car` files in `./data` |
+|---|---|---|
+| Applied | At image build | At container start |
+| Format | Readable JSON | ColdFusion archive |
+| Best for | Mappings and settings reviewed as text | Settings exported from the Administrator UI, such as datasources |
+| Committed | Shared file only | No |
 
 ### ColdFusion Archive (.car) Files
 
@@ -225,3 +294,5 @@ docker compose up -d
 - For ARM Macs, ensure Rosetta emulation is enabled
 - View logs with `docker compose logs -f [service-name]`
 - Check mounted volumes have correct permissions
+- If a mapping or setting is missing, check the build output for `Importing CFsettings from` lines, then rebuild with `docker compose build --no-cache coldfusion-server`
+- Confirm `CFSettings.local.json` is valid JSON and is in `config/imports/`
